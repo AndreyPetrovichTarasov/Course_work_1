@@ -29,6 +29,7 @@ def investment_dict(transactions_for_invest):
 
 def convert_date_format(date_str):
     date_obj = datetime.strptime(date_str, '%d.%m.%Y %H:%M:%S')
+
     return date_obj.strftime('%Y-%m-%d')
 
 
@@ -42,8 +43,11 @@ list_for_investment = [
     for item in investment_dict(transactions)
 ]
 
+list_df = list_to_df(transactions)
+
 
 if __name__ == "__main__":
     # print(transactions[:5])
-    # print(list_for_investment[:3])
+    print(list_for_investment[:3])
     print(list_to_df(transactions[:5]))
+    print(transactions[:5])
