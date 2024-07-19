@@ -63,5 +63,5 @@ list_df = list_to_df(transactions)
 if __name__ == "__main__":
     # print(transactions[:5])
     print(list_for_investment[:3])
-    print(list_to_df(transactions[:5]))
-    print(transactions[:5])
+    # print(list_to_df(transactions[:5]))
+    # print(transactions[:5])

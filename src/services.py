@@ -37,7 +37,7 @@ logging.basicConfig(
     format='%(asctime)s - %(levelname)s - %(message)s',
     datefmt='%Y-%m-%d %H:%M:%S',
     handlers=[
-        logging.FileHandler(Path(ROOT_PATH, "logs/investment_bank.log"), mode='w', encoding='utf-8'),
+        logging.FileHandler(Path(ROOT_PATH, "logs/services.log"), mode='w', encoding='utf-8'),
     ]
 )
 
@@ -87,4 +87,8 @@ def investment_bank(month: str, all_transactions: List[Dict[str, Any]], limit: i
 
 # Проверка функции
 if __name__ == "__main__":
-    print(investment_bank("2021-10", list_for_investment, 100))
+    # print(investment_bank("2021-10", list_for_investment, 100))
+    print(investment_bank("2021-12", [{'Дата операции': '2021-12-31', 'Сумма операции': 160.89},
+                                       {'Дата операции': '2021-12-31', 'Сумма операции': 64.0},
+                                       {'Дата операции': '2021-12-31', 'Сумма операции': 118.12}],
+                           100))

@@ -65,5 +65,6 @@ def spending_by_category(transactions: pd.DataFrame,
 
 
 if __name__ == "__main__":
-    print(spending_by_category(list_df, "Супермаркеты", "31.12.2018 16:39:04"))
+    print(list_df)
+    # print(spending_by_category(list_df, "Супермаркеты", "31.12.2018 16:39:04"))
     # print(spending_by_category(list_df, "Супермаркеты"))
