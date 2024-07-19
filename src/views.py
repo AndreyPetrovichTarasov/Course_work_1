@@ -2,8 +2,9 @@ import os
 import pandas as pd
 import requests
 import json
-from datetime import datetime, timedelta
-from typing import Optional, List, Dict
+import logging
+from datetime import datetime
+from typing import List, Dict
 from pathlib import Path
 from dotenv import load_dotenv
 import yfinance as yf
@@ -15,13 +16,29 @@ api_key = os.getenv('API_KEY')
 ROOT_PATH = Path(__file__).resolve().parent.parent
 
 
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(levelname)s - %(message)s',
+    datefmt='%Y-%m-%d %H:%M:%S',
+    handlers=[
+        logging.FileHandler(Path(ROOT_PATH, "logs/repots.log"), mode='w', encoding='utf-8'),
+    ]
+)
+
+
 def load_user_settings(file_path: str = 'user_settings.json') -> Dict[str, List[str]]:
+    """Считывание настроек пользователя"""
     with open(file_path, 'r', encoding='utf-8') as file:
         settings = json.load(file)
+        logging.error("File not found")
     return settings
 
 
-def get_greeting(current_time: datetime) -> str:
+def get_greeting(current_time: datetime = None) -> str:
+    """Обработка блока Приветствие"""
+    if current_time is None:
+        current_time = datetime.now()
+        logging.info(f"Преобразование даты: {current_time}")
     hour = current_time.hour
     if 6 <= hour < 12:
         return "Доброе утро"
@@ -34,6 +51,7 @@ def get_greeting(current_time: datetime) -> str:
 
 
 def filter_transactions(transactions: pd.DataFrame, date: str) -> pd.DataFrame:
+    """Фильтрация транзакций по дате"""
     end_date = datetime.strptime(date, "%Y-%m-%d %H:%M:%S")
     start_date = end_date.replace(day=1)
 
@@ -42,33 +60,41 @@ def filter_transactions(transactions: pd.DataFrame, date: str) -> pd.DataFrame:
 
     # Используем .loc для явного указания изменений
     transactions.loc[:, "Дата операции"] = pd.to_datetime(transactions["Дата операции"], format="%d.%m.%Y %H:%M:%S")
+    logging.info("Фильтрация транзакций")
 
     return transactions[(transactions["Дата операции"] >= start_date) & (transactions["Дата операции"] <= end_date)]
 
 
 def calculate_card_stats(filtered_transactions: pd.DataFrame) -> List[Dict[str, float]]:
+    """Подсчет суммы операций и кэшбека по картам"""
     card_stats = filtered_transactions.groupby('Номер карты').agg(
         total_spent=('Сумма операции', 'sum'),
         cashback=('Сумма операции', (lambda x: round(x.sum() / 100, 2)))
     ).reset_index()
     card_stats['last_digits'] = card_stats['Номер карты'].astype(str).str[-4:]
+    logging.info("Формирование транзакций по картам")
+
     return card_stats.to_dict(orient='records')
 
 
 def get_top_transactions(filtered_transactions: pd.DataFrame, top_n: int = 5) -> List[Dict[str, str]]:
+    """Филтрация последних 5 транзакций"""
     filtered_transactions["Дата операции"] = pd.to_datetime(filtered_transactions["Дата операции"],
                                                             format="%Y-%m-%d %H:%M:%S").dt.strftime('%Y-%m-%d %H:%M:%S')
     top_transactions = filtered_transactions.nlargest(top_n, 'Сумма операции')
+    logging.info("Получение последних 5 транзакций")
     return top_transactions.to_dict(orient='records')
 
 
 def get_currency_rates(currencies: List[str]) -> List[Dict[str, float]]:
+    """Получение по АПИ курсов валют"""
     symbols = ",".join(currencies)
 
     url = f'https://api.apilayer.com/currency_data/live?symbols={symbols}'
     headers = {"apikey": api_key}
 
     response = requests.get(url, headers=headers)
+    logging.error("Ошибка соединения с сервером")
 
     data = response.json()
 
@@ -76,6 +102,7 @@ def get_currency_rates(currencies: List[str]) -> List[Dict[str, float]]:
     usd_to_rub = quotes.get('USDRUB')
     usd_to_eur = quotes.get('USDEUR')
     rub_to_eur = usd_to_rub / usd_to_eur
+    logging.info("Формирование курса валют")
 
     return [
         {'currency': 'USD', 'rate': round(usd_to_rub, 2)},
@@ -84,23 +111,23 @@ def get_currency_rates(currencies: List[str]) -> List[Dict[str, float]]:
 
 
 def get_stock_prices(stocks: List[str]) -> List[Dict[str, float]]:
+    """Получение по АПИ курсов акций"""
     stock_prices = []
     for my_stock in stocks:
         stock = yf.Ticker(my_stock)
         data = stock.history(period="1d")
-
-        # Преобразуем JSON строку в объект Python (словарь)
         json_data = json.loads(data.to_json(orient="index"))
-
         # Получаем цену закрытия для последнего доступного дня
         price = json_data[list(json_data.keys())[0]]['Close']
 
         stock_prices.append({'stock': my_stock, 'price': round(price, 2)})
+    logging.info("Формирование курса акций")
 
     return stock_prices
 
 
 def generate_report(date: str) -> str:
+    """Создание финального отчета для пользователя"""
     settings = load_user_settings()
     user_currencies = settings.get("user_currencies", [])
     user_stocks = settings.get("user_stocks", [])
@@ -127,6 +154,7 @@ def generate_report(date: str) -> str:
         "currency_rates": currency_rates,
         "stock_prices": stock_prices
     }
+    logging.info("Формирование финального отчета для пользователя")
 
     return json.dumps(report, ensure_ascii=False, indent=4)
 

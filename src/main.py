@@ -1,8 +1,2 @@
-from src.utils import transactions
-import json
-
-
-print(transactions[:3])
-
-with open("j_f.json", "w", encoding="utf-8") as f:
-    json.dump(transactions[:3], f, ensure_ascii=False, indent=4)
+from src.views import generate_report
+from src.reports import spending_by_category, save_report
