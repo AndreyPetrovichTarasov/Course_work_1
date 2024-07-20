@@ -25,20 +25,21 @@
 import json
 import logging
 from datetime import datetime
+from decimal import ROUND_HALF_UP, Decimal
 from pathlib import Path
-from typing import List, Dict, Any
-from decimal import Decimal, ROUND_HALF_UP
-from src.utils import list_for_investment
+from typing import Any, Dict, List
 
 ROOT_PATH = Path(__file__).resolve().parent.parent
 
 logging.basicConfig(
     level=logging.INFO,
-    format='%(asctime)s - %(levelname)s - %(message)s',
-    datefmt='%Y-%m-%d %H:%M:%S',
+    format="%(asctime)s - %(levelname)s - %(message)s",
+    datefmt="%Y-%m-%d %H:%M:%S",
     handlers=[
-        logging.FileHandler(Path(ROOT_PATH, "logs/services.log"), mode='w', encoding='utf-8'),
-    ]
+        logging.FileHandler(
+            Path(ROOT_PATH, "logs/services.log"), mode="w", encoding="utf-8"
+        ),
+    ],
 )
 
 
@@ -64,31 +65,41 @@ def parse_date(date_str: str) -> datetime:
     raise ValueError(f"Date {date_str} does not match any of the expected formats")
 
 
-def investment_bank(month: str, all_transactions: List[Dict[str, Any]], limit: int) -> str:
+def investment_bank(
+    month: str, all_transactions: List[Dict[str, Any]], limit: int
+) -> str:
     """Функция расчитывает сумму, которую удалось бы отложить в «Инвесткопилку»."""
-    total_sum = Decimal('0.00')
+    total_sum = Decimal("0.00")
     for transaction in all_transactions:
         transaction_date = parse_date(transaction["Дата операции"])
         if transaction_date.strftime("%Y-%m") == month:
-            rounding_amount = calculate_rounding_amount(transaction["Сумма операции"], limit)
+            rounding_amount = calculate_rounding_amount(
+                transaction["Сумма операции"], limit
+            )
             total_sum += Decimal(str(rounding_amount))
             logging.info(
-                f"Transaction Date: {transaction_date}, Amount: {transaction['Сумма операции']}, Rounding Amount: {rounding_amount}")
+                f"Transaction Date: {transaction_date},"
+                f" Amount: {transaction['Сумма операции']}, Rounding Amount: {rounding_amount}"
+            )
 
-    result = total_sum.quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
+    result = total_sum.quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
     logging.info(f"Total Sum for Investment Bank: {result}")
 
-    response = {
-        "month": month,
-        "total_savings": float(result)
-    }
+    response = {"month": month, "total_savings": float(result)}
     return json.dumps(response, ensure_ascii=False, indent=4)
 
 
 # Проверка функции
 if __name__ == "__main__":
     # print(investment_bank("2021-10", list_for_investment, 100))
-    print(investment_bank("2021-12", [{'Дата операции': '2021-12-31', 'Сумма операции': 160.89},
-                                       {'Дата операции': '2021-12-31', 'Сумма операции': 64.0},
-                                       {'Дата операции': '2021-12-31', 'Сумма операции': 118.12}],
-                           100))
+    print(
+        investment_bank(
+            "2021-12",
+            [
+                {"Дата операции": "2021-12-31", "Сумма операции": 160.89},
+                {"Дата операции": "2021-12-31", "Сумма операции": 64.0},
+                {"Дата операции": "2021-12-31", "Сумма операции": 118.12},
+            ],
+            100,
+        )
+    )

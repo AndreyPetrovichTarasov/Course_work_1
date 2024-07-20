@@ -1,8 +1,7 @@
-from src.views import generate_report
-from src.reports import spending_by_category, save_report
-from src.utils import transactions, list_df, list_for_investment
+from src.reports import spending_by_category
 from src.services import investment_bank
-
+from src.utils import list_df, list_for_investment
+from src.views import generate_report
 
 print("Это страница главная")
 print(generate_report("2021-12-31 15:30:00"))
@@ -15,4 +14,3 @@ print()
 print("Это отчет по категориям")
 print(spending_by_category(list_df, "Супермаркеты", "31.12.2018 16:39:04"))
 # print(spending_by_category(list_df, "Супермаркеты"))
-

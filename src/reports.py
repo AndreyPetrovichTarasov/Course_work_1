@@ -1,20 +1,23 @@
-import pandas as pd
 import logging
+from datetime import datetime
 from pathlib import Path
-from datetime import datetime, timedelta
-from typing import Optional, Callable
+from typing import Callable, Optional
+
+import pandas as pd
+
 from src.utils import list_df
-from src.utils import convert_date_format
 
 ROOT_PATH = Path(__file__).resolve().parent.parent
 
 logging.basicConfig(
     level=logging.INFO,
-    format='%(asctime)s - %(levelname)s - %(message)s',
-    datefmt='%Y-%m-%d %H:%M:%S',
+    format="%(asctime)s - %(levelname)s - %(message)s",
+    datefmt="%Y-%m-%d %H:%M:%S",
     handlers=[
-        logging.FileHandler(Path(ROOT_PATH, "logs/repots.log"), mode='w', encoding='utf-8'),
-    ]
+        logging.FileHandler(
+            Path(ROOT_PATH, "logs/repots.log"), mode="w", encoding="utf-8"
+        ),
+    ],
 )
 
 
@@ -37,27 +40,33 @@ def save_report(file_name: Optional[str] = None) -> Callable:
 
 @save_report("custom_report.json")
 # @save_report()
-def spending_by_category(transactions: pd.DataFrame,
-                         category: str,
-                         date: Optional[str] = None) -> pd.DataFrame:
+def spending_by_category(
+    transactions: pd.DataFrame, category: str, date: Optional[str] = None
+) -> pd.DataFrame:
     """Сортировка списка словарей по дате и категориям"""
-    transactions["Дата операции"] = pd.to_datetime(transactions["Дата операции"], format="%d.%m.%Y %H:%M:%S")
+    transactions["Дата операции"] = pd.to_datetime(
+        transactions["Дата операции"], format="%d.%m.%Y %H:%M:%S"
+    )
 
     if date is None:
         last_date = transactions["Дата операции"].max()
         three_months_ago = last_date - pd.DateOffset(months=3)
 
         filtered_df = transactions[
-            (transactions['Дата операции'] >= three_months_ago) & (transactions['Дата операции'] <= last_date)]
-        filtered = filtered_df[filtered_df['Категория'] == category]
+            (transactions["Дата операции"] >= three_months_ago)
+            & (transactions["Дата операции"] <= last_date)
+        ]
+        filtered = filtered_df[filtered_df["Категория"] == category]
         logging.info("Фильтрация по категориям по последней дате")
     else:
         user_date = datetime.strptime(date, "%d.%m.%Y %H:%M:%S")
         three_months_ago = user_date - pd.DateOffset(months=3)
 
         filtered_df = transactions[
-            (transactions['Дата операции'] >= three_months_ago) & (transactions['Дата операции'] <= user_date)]
-        filtered = filtered_df[filtered_df['Категория'] == category]
+            (transactions["Дата операции"] >= three_months_ago)
+            & (transactions["Дата операции"] <= user_date)
+        ]
+        filtered = filtered_df[filtered_df["Категория"] == category]
         logging.info("Фильтрация по категориям по указанной дате")
     json_data = filtered.to_json(orient="records", force_ascii=False)
 
