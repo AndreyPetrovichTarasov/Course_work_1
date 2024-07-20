@@ -45,6 +45,7 @@ logging.basicConfig(
 
 def calculate_rounding_amount(amount: float, rounding_step: int) -> float:
     """Функция рассчитывает сумму на инвесткопилку в зависимости от шага"""
+    """Здесь я пытался избавится от таких значений в выводе: '234.424949294', но не получилось"""
     # amount_decimal = Decimal(str(amount))
     # rounding_step_decimal = Decimal(rounding_step)
     # rounded_amount = (amount_decimal // rounding_step_decimal + 1) * rounding_step_decimal
