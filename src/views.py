@@ -3,7 +3,7 @@ import logging
 import os
 from datetime import datetime
 from pathlib import Path
-from typing import Dict, List, Any, Hashable,Optional
+from typing import Dict, List, Any, Hashable, Optional
 
 import pandas as pd
 import requests
@@ -79,7 +79,7 @@ def calculate_card_stats(filtered_transactions: pd.DataFrame) -> List[Dict[Hasha
         filtered_transactions.groupby("Номер карты")
         .agg(
             total_spent=("Сумма операции", "sum"),
-            cashback=("Сумма операции", (lambda x: round(x.sum() / 100, 2))),
+            cashback=("Сумма операции", (lambda x: abs(round(x.sum() / 100, 2)))),
         )
         .reset_index()
     )
