@@ -3,11 +3,7 @@ import logging
 import os
 from datetime import datetime
 from pathlib import Path
-from typing import Dict, List, Any, Hashable, Optional
-
 import pandas as pd
-import requests
-import yfinance as yf
 from dotenv import load_dotenv
 from src.utils import (load_user_settings, get_greeting, filter_transactions, calculate_card_stats,
                        get_top_transactions, get_currency_rates, get_stock_prices, df)
