@@ -9,6 +9,8 @@ import pandas as pd
 import requests
 import yfinance as yf
 from dotenv import load_dotenv
+from src.utils import (load_user_settings, get_greeting, filter_transactions, calculate_card_stats,
+                       get_top_transactions, get_currency_rates, get_stock_prices, df)
 
 load_dotenv()
 
@@ -29,127 +31,16 @@ logging.basicConfig(
 )
 
 
-def load_user_settings(file_path: str = "user_settings.json") -> Dict[str, List[str]]:
-    """Считывание настроек пользователя"""
-    with open(file_path, "r", encoding="utf-8") as file:
-        settings = json.load(file)
-        logging.error("File not found")
-    return settings
-
-
-def get_greeting(current_time: Optional[datetime] = None) -> str:
-    """Обработка блока Приветствие"""
-    if current_time is None:
-        current_time = datetime.now()
-        logging.info(f"Преобразование даты: {current_time}")
-    hour = current_time.hour
-    if 6 <= hour < 12:
-        return "Доброе утро"
-    elif 12 <= hour < 18:
-        return "Добрый день"
-    elif 18 <= hour < 22:
-        return "Добрый вечер"
-    else:
-        return "Доброй ночи"
-
-
-def filter_transactions(transactions: pd.DataFrame, date: str) -> pd.DataFrame:
-    """Фильтрация транзакций по дате"""
-    end_date = datetime.strptime(date, "%Y-%m-%d %H:%M:%S")
-    start_date = end_date.replace(day=1)
-
-    # Создаем явную копию DataFrame
-    transactions = transactions.copy()
-
-    # Используем .loc для явного указания изменений
-    transactions.loc[:, "Дата операции"] = pd.to_datetime(
-        transactions["Дата операции"], format="%d.%m.%Y %H:%M:%S"
-    )
-    logging.info("Фильтрация транзакций")
-
-    return transactions[
-        (transactions["Дата операции"] >= start_date)
-        & (transactions["Дата операции"] <= end_date)
-    ]
-
-
-def calculate_card_stats(filtered_transactions: pd.DataFrame) -> List[Dict[Hashable, Any]]:
-    """Подсчет суммы операций и кэшбека по картам"""
-    card_stats = (
-        filtered_transactions.groupby("Номер карты")
-        .agg(
-            total_spent=("Сумма операции", "sum"),
-            cashback=("Сумма операции", (lambda x: abs(round(x.sum() / 100, 2)))),
-        )
-        .reset_index()
-    )
-    card_stats["last_digits"] = card_stats["Номер карты"].astype(str).str[-4:]
-    logging.info("Формирование транзакций по картам")
-
-    return card_stats.to_dict(orient="records")
-
-
-def get_top_transactions(
-    filtered_transactions: pd.DataFrame, top_n: int = 5
-) -> list[dict[Hashable, Any]]:
-    """Филтрация последних 5 транзакций"""
-    filtered_transactions["Дата операции"] = pd.to_datetime(
-        filtered_transactions["Дата операции"], format="%Y-%m-%d %H:%M:%S"
-    ).dt.strftime("%Y-%m-%d %H:%M:%S")
-    top_transactions = filtered_transactions.nlargest(top_n, "Сумма операции")
-    logging.info("Получение последних 5 транзакций")
-    return top_transactions.to_dict(orient="records")
-
-
-def get_currency_rates(currencies: List[str]) -> List[Dict[str, Any]]:
-    """Получение по АПИ курсов валют"""
-    symbols = ",".join(currencies)
-
-    url = f"https://api.apilayer.com/currency_data/live?symbols={symbols}"
-    headers = {"apikey": api_key}
-
-    response = requests.get(url, headers=headers)
-    logging.error("Ошибка соединения с сервером")
-
-    data = response.json()
-
-    quotes = data.get("quotes", {})
-    usd_to_rub = quotes.get("USDRUB")
-    usd_to_eur = quotes.get("USDEUR")
-    rub_to_eur = usd_to_rub / usd_to_eur
-    logging.info("Формирование курса валют")
-
-    return [
-        {"currency": "USD", "rate": round(usd_to_rub, 2)},
-        {"currency": "EUR", "rate": round(rub_to_eur, 2)},
-    ]
-
-
-def get_stock_prices(stocks: List[str]) -> List[Dict[str, float]]:
-    """Получение по АПИ курсов акций"""
-    stock_prices = []
-    for my_stock in stocks:
-        stock = yf.Ticker(my_stock)
-        data = stock.history(period="1d")
-        json_data = json.loads(data.to_json(orient="index"))
-        # Получаем цену закрытия для последнего доступного дня
-        price = json_data[list(json_data.keys())[0]]["Close"]
-
-        stock_prices.append({"stock": my_stock, "price": round(price, 2)})
-    logging.info("Формирование курса акций")
-
-    return stock_prices
-
-
-def generate_report(date: str) -> str:
+def generate_report(dataframe: pd.DataFrame) -> str:
     """Создание финального отчета для пользователя"""
+    datetime_str = dataframe['datetime'].iloc[0]
     settings = load_user_settings()
     user_currencies = settings.get("user_currencies", [])
     user_stocks = settings.get("user_stocks", [])
 
     transactions = pd.read_excel(Path(ROOT_PATH, "data/operations.xlsx"))
 
-    filtered_transactions = filter_transactions(transactions, date)
+    filtered_transactions = filter_transactions(transactions, datetime_str)
 
     card_stats = calculate_card_stats(filtered_transactions)
 
@@ -159,7 +50,7 @@ def generate_report(date: str) -> str:
 
     stock_prices = get_stock_prices(user_stocks)
 
-    current_time = datetime.strptime(date, "%Y-%m-%d %H:%M:%S")
+    current_time = datetime.strptime(datetime_str, "%Y-%m-%d %H:%M:%S")
     greeting = get_greeting(current_time)
 
     report = {
@@ -176,4 +67,4 @@ def generate_report(date: str) -> str:
 
 # Пример вызова функции
 if __name__ == "__main__":
-    print(generate_report("2021-12-31 15:30:00"))
+    print(generate_report(df))
